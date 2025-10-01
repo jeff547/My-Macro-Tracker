@@ -14,7 +14,7 @@
 
 ---
 
-###🚀 Features
+### 🚀 Features
 
 <p align="center">
   <h4>📊 1. App Overview - Quick Glance at Your Daily Progress</h4>
