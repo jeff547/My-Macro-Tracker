@@ -121,4 +121,4 @@ app.*.symbols
 # General
 .venv/
 .env
-./assets/models/
+assets/models/
