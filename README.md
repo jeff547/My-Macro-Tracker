@@ -53,3 +53,7 @@
   <em>Search through an extensive list of foods frm FoodData Central Database. Log your meals quickly, update your diary seamlessly, and ensure your nutritional data is accurate and complete every day.</em><br/><br/>
   <img src="https://media.giphy.com/media/HOVvImMCEYuaNkbqV7/giphy.gif" width="275"/>
 </p>
+
+## Contribute
+
+We would love you for the contribution to My Macro Tracker, check the ``LICENSE`` file for more info.
