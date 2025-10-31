@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:food_diary/presentation/screens/main_pages/about_page.dart';
@@ -21,10 +23,10 @@ class NutritionDashboard extends StatefulWidget {
 class NutritionDashboardState extends State<NutritionDashboard> {
   final nutritionBox = Hive.box("nutritionBox");
   final DateFormat formatter = DateFormat('MMMM d, yyyy');
-  final List<Color> macroColors = [
-    Colors.orange,
-    Colors.purple,
-    Colors.greenAccent
+  final List<Color> macroColors = const [
+    AppColors.secondaryAccent,
+    Color(0xFF7AA9FF),
+    Color(0xFFFFB86C),
   ];
 
   late final double estimatedCarbs;
@@ -185,11 +187,13 @@ class NutritionDashboardState extends State<NutritionDashboard> {
         ],
       ),
       body: SingleChildScrollView(
-        child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               dateSelector(),
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
               _card(
                 title: "Calories",
                 child: SizedBox(
@@ -197,13 +201,12 @@ class NutritionDashboardState extends State<NutritionDashboard> {
                   child: caloriesData(),
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 24),
               _card(
                 title: "Macronutrient Breakdown",
                 child:
                     SizedBox(height: 300, child: BarChart(macronutrientData())),
               ),
-              const SizedBox(height: 30),
             ],
           ),
         ),
@@ -212,125 +215,238 @@ class NutritionDashboardState extends State<NutritionDashboard> {
     );
   }
 
-  Row caloriesData() {
-    double percent = currentCalories / estimatedCalories;
+  Widget caloriesData() {
+    final double ratio =
+        estimatedCalories > 0 ? currentCalories / estimatedCalories : 0;
+    final double percent = ratio.clamp(0.0, 1.0);
+    final int displayPercent = (ratio * 100).clamp(0, 999).round();
+
+    const mealColors = [
+      AppColors.secondaryAccent,
+      Color(0xFF7AA9FF),
+      Color(0xFFFFB86C),
+    ];
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text.rich(
-                TextSpan(
+        SizedBox(
+          width: 150,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 40,
+              ),
+              SizedBox(
+                width: 120,
+                height: 120,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    TextSpan(
-                      text: "  Calorie Budget:\n",
-                      style: CustomTextStyles.calsLabel,
+                    SizedBox(
+                      height: 120,
+                      width: 120,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 10,
+                        value: percent,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.secondaryAccent,
+                        ),
+                        backgroundColor: Colors.white.withValues(alpha: 0.08),
+                      ),
                     ),
-                    TextSpan(
-                      text:
-                          "${currentCalories.toInt()} / ${estimatedCalories.toInt()} kcal",
-                      style: CustomTextStyles.calsText,
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "$displayPercent%",
+                          style: percent <= 1.1 && percent >= .9
+                              ? CustomTextStyles.percentText2
+                              : CustomTextStyles.percentText,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "of goal",
+                          style: CustomTextStyles.calsLabel,
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: 100,
-              height: 100,
-              child: Stack(
+              const SizedBox(height: 20),
+              Column(
                 children: [
-                  SizedBox(
-                    height: 100,
-                    width: 100,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 10,
-                      value: percent,
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(Colors.blue),
-                      backgroundColor: Colors.grey[300],
+                  Text(
+                    "${currentCalories.toInt()} / ${estimatedCalories.toInt()}",
+                    style: CustomTextStyles.calsText.copyWith(
+                      color: AppColors.secondaryAccent,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  Center(
-                    child: Text(
-                      "${(percent * 100).round()}%",
-                      style: percent <= 1.1 && percent >= .9
-                          ? CustomTextStyles.percentText2
-                          : CustomTextStyles.percentText,
+                  const SizedBox(height: 6),
+                  Text(
+                    "kcal",
+                    style: CustomTextStyles.calsLabel.copyWith(
+                      color: AppColors.secondaryAccent,
+                      fontSize: 14,
                     ),
                   ),
                 ],
               ),
-            )
-          ],
+            ],
+          ),
         ),
-        const SizedBox(width: 20),
-        Column(
-          children: [
-            const SizedBox(height: 55),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: "Breakfast: ",
-                    style: CustomTextStyles.calsText2,
-                  ),
-                  TextSpan(
-                    text: "${breakfastCalories.toInt()} kcal",
-                    style: CustomTextStyles.calsText3,
-                  ),
-                ],
+        const SizedBox(width: 24),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              _mealRow(
+                "Breakfast",
+                breakfastCalories,
+                accent: mealColors[0],
+                showDivider: true,
               ),
-            ),
-            const SizedBox(height: 35),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: "Lunch:  ",
-                    style: CustomTextStyles.calsText2,
-                  ),
-                  TextSpan(
-                    text: "${lunchCalories.toInt()} kcal",
-                    style: CustomTextStyles.calsText3,
-                  ),
-                ],
+              const SizedBox(height: 8),
+              _mealRow(
+                "Lunch",
+                lunchCalories,
+                accent: mealColors[1],
+                showDivider: true,
               ),
-            ),
-            const SizedBox(height: 35),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: "Dinner:  ",
-                    style: CustomTextStyles.calsText2,
-                  ),
-                  TextSpan(
-                    text: "${dinnerCalories.toInt()} kcal",
-                    style: CustomTextStyles.calsText3,
-                  ),
-                ],
+              const SizedBox(height: 8),
+              _mealRow(
+                "Dinner",
+                dinnerCalories,
+                accent: mealColors[2],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
   }
 
+  Widget _mealRow(
+    String label,
+    double calories, {
+    required Color accent,
+    bool showDivider = false,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool stackVertically = constraints.maxWidth < 160;
+
+        Widget content;
+        if (stackVertically) {
+          content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: accent,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: CustomTextStyles.calsText2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.only(left: 22),
+                child: _calorieAmountText(calories, accent),
+              ),
+            ],
+          );
+        } else {
+          content = Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: CustomTextStyles.calsText2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    _calorieAmountText(calories, accent),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            content,
+            if (showDivider) ...[
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Colors.white12),
+              const SizedBox(height: 12),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _calorieAmountText(double calories, Color accent) {
+    final Color color = calories > 0 ? accent : Colors.white38;
+    return RichText(
+      text: TextSpan(
+        style: CustomTextStyles.calsText3.copyWith(color: color),
+        children: [
+          TextSpan(text: calories.toInt().toString()),
+          const TextSpan(text: " "),
+          TextSpan(
+            text: "kcal",
+            style: CustomTextStyles.calsLabel.copyWith(
+              color: color,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Container dateSelector() {
     return Container(
-      height: 50,
-      width: 400,
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             spreadRadius: 5,
             blurRadius: 7,
             offset: const Offset(0, 3),
@@ -351,12 +467,17 @@ class NutritionDashboardState extends State<NutritionDashboard> {
               color: Color.fromARGB(255, 255, 255, 255),
             ),
           ),
-          const SizedBox(width: 65),
-          Text(
-            formatter.format(current),
-            style: CustomTextStyles.configBody2,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              formatter.format(current),
+              style: CustomTextStyles.configBody2,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          const SizedBox(width: 65),
+          const SizedBox(width: 12),
           IconButton(
             onPressed: () {
               setState(() {
@@ -376,13 +497,12 @@ class NutritionDashboardState extends State<NutritionDashboard> {
 
   Widget _card({required String title, required Widget child}) {
     return Container(
-      width: 360,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(25),
         color: const Color(0xFF1E1E1E),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             spreadRadius: 5,
             blurRadius: 7,
             offset: const Offset(0, 3),
@@ -391,6 +511,7 @@ class NutritionDashboardState extends State<NutritionDashboard> {
       ),
       padding: const EdgeInsets.all(35),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
@@ -405,6 +526,16 @@ class NutritionDashboardState extends State<NutritionDashboard> {
   }
 
   BarChartData macronutrientData() {
+    final goals = <double>[estimatedProtein, estimatedCarbs, estimatedFats];
+    final actuals = <double>[currentProtein, currentCarbs, currentFat];
+    final highest = math
+        .max(
+          goals.fold<double>(0, (prev, value) => math.max(prev, value)),
+          actuals.fold<double>(0, (prev, value) => math.max(prev, value)),
+        )
+        .ceilToDouble();
+    final maxY = highest == 0 ? 10.0 : (highest * 1.2).clamp(10.0, 500.0);
+
     return BarChartData(
       barTouchData: BarTouchData(
         touchTooltipData: BarTouchTooltipData(
@@ -423,16 +554,16 @@ class NutritionDashboardState extends State<NutritionDashboard> {
             }
             return BarTooltipItem(
               '$macroName\n',
-              const TextStyle(
-                color: Colors.white,
+              TextStyle(
+                color: macroColors[groupIndex],
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
               children: <TextSpan>[
                 TextSpan(
                   text: rod.toY.round().toString(),
-                  style: const TextStyle(
-                    color: Color.fromARGB(255, 0, 255, 8),
+                  style: TextStyle(
+                    color: macroColors[groupIndex],
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -454,7 +585,7 @@ class NutritionDashboardState extends State<NutritionDashboard> {
             );
           }
           return FlLine(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             strokeWidth: 1,
           );
         },
@@ -462,7 +593,7 @@ class NutritionDashboardState extends State<NutritionDashboard> {
       titlesData: FlTitlesData(
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
-            reservedSize: 30,
+            reservedSize: 40,
             showTitles: true,
             getTitlesWidget: (value, meta) {
               return SideTitleWidget(
@@ -478,25 +609,34 @@ class NutritionDashboardState extends State<NutritionDashboard> {
         ),
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
-            reservedSize: 40,
+            reservedSize: 42,
             showTitles: true,
             getTitlesWidget: (value, meta) {
               switch (value.toInt()) {
                 case 0:
                   return Text(
                     'Protein\n$currentProtein g',
-                    style: CustomTextStyles.barText2,
+                    style: CustomTextStyles.barText2.copyWith(
+                      color: macroColors[0],
+                    ),
                     textAlign: TextAlign.center,
                   );
                 case 1:
                   return Text(
                     'Carbs\n$currentCarbs g',
-                    style: CustomTextStyles.barText2,
+                    style: CustomTextStyles.barText2.copyWith(
+                      color: macroColors[1],
+                    ),
                     textAlign: TextAlign.center,
                   );
                 case 2:
-                  return Text('Fat\n$currentFat g',
-                      style: CustomTextStyles.barText2);
+                  return Text(
+                    'Fat\n$currentFat g',
+                    style: CustomTextStyles.barText2.copyWith(
+                      color: macroColors[2],
+                    ),
+                    textAlign: TextAlign.center,
+                  );
                 default:
                   return const Text('');
               }
@@ -504,46 +644,70 @@ class NutritionDashboardState extends State<NutritionDashboard> {
           ),
         ),
       ),
-      maxY: 250,
+      maxY: maxY,
       borderData: FlBorderData(
         show: false,
       ),
       barGroups: [
         BarChartGroupData(x: 0, barRods: [
           BarChartRodData(
-              backDrawRodData: BackgroundBarChartRodData(
-                show: true,
-                color: const Color(0xFFB0B0B0),
-                toY: estimatedProtein,
-              ),
-              toY: currentProtein,
-              color: macroColors[0],
-              width: 18,
-              borderRadius: BorderRadius.circular(8))
+            backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              color: macroColors[0].withValues(alpha: 0.25),
+              toY: estimatedProtein,
+            ),
+            toY: currentProtein,
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [
+                macroColors[0],
+                macroColors[0].withValues(alpha: 0.7),
+              ],
+            ),
+            width: 18,
+            borderRadius: BorderRadius.circular(8),
+          )
         ]),
         BarChartGroupData(x: 1, barRods: [
           BarChartRodData(
-              backDrawRodData: BackgroundBarChartRodData(
-                show: true,
-                color: const Color(0xFFB0B0B0),
-                toY: estimatedCarbs,
-              ),
-              toY: currentCarbs,
-              color: macroColors[2],
-              width: 18,
-              borderRadius: BorderRadius.circular(8))
+            backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              color: macroColors[1].withValues(alpha: 0.25),
+              toY: estimatedCarbs,
+            ),
+            toY: currentCarbs,
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [
+                macroColors[1],
+                macroColors[1].withValues(alpha: 0.7),
+              ],
+            ),
+            width: 18,
+            borderRadius: BorderRadius.circular(8),
+          )
         ]),
         BarChartGroupData(x: 2, barRods: [
           BarChartRodData(
-              backDrawRodData: BackgroundBarChartRodData(
-                show: true,
-                color: const Color(0xFFB0B0B0),
-                toY: estimatedFats,
-              ),
-              toY: currentFat,
-              color: macroColors[1],
-              width: 18,
-              borderRadius: BorderRadius.circular(8))
+            backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              color: macroColors[2].withValues(alpha: 0.25),
+              toY: estimatedFats,
+            ),
+            toY: currentFat,
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [
+                macroColors[2],
+                macroColors[2].withValues(alpha: 0.7),
+              ],
+            ),
+            width: 18,
+            borderRadius: BorderRadius.circular(8),
+          )
         ]),
       ],
     );

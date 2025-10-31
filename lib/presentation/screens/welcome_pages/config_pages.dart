@@ -73,6 +73,7 @@ void calulateNutritonPlan() async {
   await prefs.setDouble("estimatedProtein", estimatedProtein);
   await prefs.setDouble("estimatedCarbs", estimatedCarbs);
   await prefs.setDouble("estimatedFats", estimatedFats);
+  await prefs.setBool("hasCompletedOnboarding", true);
 }
 
 class GenderPage extends StatefulWidget {
@@ -248,8 +249,8 @@ class _ActivityPageState extends State<ActivityPage> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: SizedBox(
-                width: 200,
-                height: 200,
+                width: 180,
+                height: 180,
                 child: getImage(_sliderVal),
               ),
             ),

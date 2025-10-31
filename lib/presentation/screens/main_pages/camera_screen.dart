@@ -84,7 +84,9 @@ class CameraScreenState extends State<CameraScreen> {
       labels = await loadLabels('assets/labels.txt');
     } catch (e) {
       log('Delegate failed, falling back to CPU: $e');
-      interpreter = await Interpreter.fromAsset('model.tflite');
+      interpreter = await Interpreter.fromAsset(
+        'assets/models/food101_vit.tflite',
+      );
     }
     print(interpreter.toString());
   }
@@ -108,13 +110,11 @@ class CameraScreenState extends State<CameraScreen> {
                   final pixel = resizedImage.getPixel(x, y);
                   switch (color) {
                     case 0:
-                      return img.getRed(pixel) / 255.0;
-
+                      return pixel.rNormalized.toDouble();
                     case 1:
-                      return img.getGreen(pixel) / 255.0;
-
+                      return pixel.gNormalized.toDouble();
                     case 2:
-                      return img.getBlue(pixel) / 255.0;
+                      return pixel.bNormalized.toDouble();
                     default:
                       return 0.0;
                   }
@@ -157,10 +157,15 @@ class CameraScreenState extends State<CameraScreen> {
       body: SafeArea(
         child: SizedBox.expand(
           child: CameraAwesomeBuilder.awesome(
-            saveConfig: SaveConfig.photo(pathBuilder: ),
+            saveConfig: SaveConfig.photo(),
             // On image capture button press
             onMediaTap: (mediaCapture) async {
-              await classifyImage(mediaCapture.filePath);
+              final path = mediaCapture.captureRequest.path;
+              // Only classify pictures that were saved successfully.
+              if (path == null || !mediaCapture.isPicture) {
+                return;
+              }
+              await classifyImage(path);
             },
           ),
         ),
@@ -168,7 +173,6 @@ class CameraScreenState extends State<CameraScreen> {
     );
   }
 }
-
 
 //  Stack(
 //             children: [

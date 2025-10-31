@@ -6,14 +6,21 @@ import 'package:food_diary/presentation/widgets/daily_nutrition.dart';
 import 'package:food_diary/presentation/widgets/theme.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await dotenv.load(fileName: '.env');
+
   await Hive.initFlutter();
   Hive.registerAdapter(DailyNutritionAdapter());
+  Hive.registerAdapter(MealTypeAdapter());
 
   await Hive.openBox('nutritionBox');
+
+  // Reset persisted user state so onboarding always runs on launch.
+  // await _resetUserState();
 
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -36,6 +43,13 @@ class MyApp extends StatelessWidget {
   }
 }
 
+Future<void> _resetUserState() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.clear();
+  final nutritionBox = Hive.box('nutritionBox');
+  await nutritionBox.clear();
+}
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -51,10 +65,21 @@ class SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> checkIfFirst() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    double? calories = prefs.getDouble('estimatedCalories');
+    final prefs = await SharedPreferences.getInstance();
+    final bool? completed = prefs.getBool('hasCompletedOnboarding');
+    final double? calories = prefs.getDouble('estimatedCalories');
 
-    if (calories != null) {
+    final bool shouldSkipWelcome;
+    if (completed != null) {
+      shouldSkipWelcome = completed;
+    } else {
+      shouldSkipWelcome = calories != null;
+      if (shouldSkipWelcome) {
+        await prefs.setBool('hasCompletedOnboarding', true);
+      }
+    }
+
+    if (shouldSkipWelcome) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const NutritionDashboard()),

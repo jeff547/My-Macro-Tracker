@@ -122,3 +122,4 @@ app.*.symbols
 .venv/
 .env
 assets/models/
+.DStore

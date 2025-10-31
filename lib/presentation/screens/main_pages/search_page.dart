@@ -18,22 +18,58 @@ class SearchPage extends StatefulWidget {
 }
 
 class SearchPageState extends State<SearchPage> {
-  bool isFoodListAvaliable = false;
-  late Map<String, int> foodList;
+  Map<String, int> foodList = {};
+  bool isLoading = false;
+  String? errorMessage;
 
   @override
   void initState() {
     super.initState();
-    if (widget.predictedLabel != null) {
-      getFoodList(widget.predictedLabel!);
+    final initialQuery = widget.predictedLabel?.trim();
+    if (initialQuery != null && initialQuery.isNotEmpty) {
+      getFoodList(initialQuery);
     }
   }
 
   Future<void> getFoodList(String value) async {
-    foodList = await fetchFoodList(value);
+    final query = value.trim();
+    if (query.isEmpty) {
+      setState(() {
+        foodList = {};
+        errorMessage = 'Enter a search term to begin.';
+        isLoading = false;
+      });
+      return;
+    }
+
     setState(() {
-      isFoodListAvaliable = true;
+      isLoading = true;
+      errorMessage = null;
     });
+
+    try {
+      final results = await fetchFoodList(query);
+      if (!mounted) return;
+      setState(() {
+        foodList = results;
+        isLoading = false;
+        errorMessage = results.isEmpty ? 'No foods found for "$query".' : null;
+      });
+    } on FoodApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        errorMessage = error.message;
+        foodList = {};
+        isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        errorMessage = 'Something went wrong while searching.';
+        foodList = {};
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -79,12 +115,34 @@ class SearchPageState extends State<SearchPage> {
                 ),
                 const SizedBox(height: 40),
                 Expanded(
-                  child: isFoodListAvaliable
-                      ? FoodSearchList(
-                          foodList: foodList, selectedDate: widget.selectedDate)
-                      : const Center(
-                          child: CircularProgressIndicator(),
-                        ),
+                  child: Builder(
+                    builder: (context) {
+                      if (isLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (errorMessage != null) {
+                        return Center(
+                          child: Text(
+                            errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: CustomTextStyles.configBody2,
+                          ),
+                        );
+                      }
+                      if (foodList.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'Search for a food to see results.',
+                            style: CustomTextStyles.configBody2,
+                          ),
+                        );
+                      }
+                      return FoodSearchList(
+                        foodList: foodList,
+                        selectedDate: widget.selectedDate,
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -107,16 +165,19 @@ class FoodSearchList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final entries = foodList.entries.toList();
     return ListView.builder(
-      itemCount: foodList.keys.length,
+      itemCount: entries.length,
       itemBuilder: (context, index) {
+        final entry = entries[index];
         return InkWell(
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => Nutrition(
-                  query: foodList[foodList.keys.toList()[index]],
+                  fdcId: entry.value,
+                  foodName: entry.key,
                   selectedDate: selectedDate,
                 ),
               ),
@@ -153,7 +214,7 @@ class FoodSearchList extends StatelessWidget {
                           Expanded(
                             child: AutoSizeText(
                               textAlign: TextAlign.center,
-                              foodList.keys.toList()[index],
+                              entry.key,
                               style: CustomTextStyles.searchtext,
                             ),
                           ),
